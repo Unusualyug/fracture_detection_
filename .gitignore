@@ -69,4 +69,4 @@ test_output/
 # Unpublished manuscript + mail attachments (not for public sync)
 # =========================
 gmail/
-paper/*.docx
+paper/
