@@ -59,3 +59,14 @@ Thumbs.db
 *.tmp
 
 dist/
+
+# =========================
+# Local test artifacts
+# =========================
+test_output/
+
+# =========================
+# Unpublished manuscript + mail attachments (not for public sync)
+# =========================
+gmail/
+paper/*.docx
