@@ -1,0 +1,25 @@
+{
+  "threshold": 0.5,
+  "per_source": {
+    "FracAtlas": {
+      "n": 615,
+      "accuracy": 0.7560975609756098,
+      "sensitivity": 0.48333333333333334,
+      "specificity": 0.8222222222222222
+    }
+  },
+  "leave_one_source_out": {
+    "FracAtlas": {
+      "n": 615,
+      "accuracy": 0.7560975609756098,
+      "sensitivity": 0.48333333333333334,
+      "specificity": 0.8222222222222222,
+      "note": "performance on this source alone (external-style estimate)"
+    }
+  },
+  "sensitivity_spread_across_sources": {
+    "min": 0.48333333333333334,
+    "max": 0.48333333333333334,
+    "range": 0.0
+  }
+}

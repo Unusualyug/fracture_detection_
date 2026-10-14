@@ -1,0 +1,12 @@
+{
+  "source": "ExternalFractureGH Raw Data subset",
+  "kept": {
+    "fracture": 2384,
+    "no_fracture": 0
+  },
+  "removed_overlap_with_fracatlas": {
+    "md5": 3366,
+    "phash_near": 0
+  },
+  "method": "exclude MD5-identical or pHash Hamming<=4 vs every FracAtlas image"
+}

@@ -1,0 +1,64 @@
+{
+  "threshold": 0.5,
+  "per_source": {
+    "hand": {
+      "n": 231,
+      "accuracy": 0.6277056277056277,
+      "sensitivity": 0.6857142857142857,
+      "specificity": 0.6024844720496895
+    },
+    "hip": {
+      "n": 21,
+      "accuracy": 0.9523809523809523,
+      "sensitivity": 0.0,
+      "specificity": 1.0
+    },
+    "leg": {
+      "n": 352,
+      "accuracy": 0.8238636363636364,
+      "sensitivity": 0.20833333333333334,
+      "specificity": 0.9210526315789473
+    },
+    "shoulder": {
+      "n": 11,
+      "accuracy": 0.9090909090909091,
+      "sensitivity": 0.0,
+      "specificity": 1.0
+    }
+  },
+  "leave_one_source_out": {
+    "hand": {
+      "n": 231,
+      "accuracy": 0.6277056277056277,
+      "sensitivity": 0.6857142857142857,
+      "specificity": 0.6024844720496895,
+      "note": "performance on this source alone (external-style estimate)"
+    },
+    "hip": {
+      "n": 21,
+      "accuracy": 0.9523809523809523,
+      "sensitivity": 0.0,
+      "specificity": 1.0,
+      "note": "performance on this source alone (external-style estimate)"
+    },
+    "leg": {
+      "n": 352,
+      "accuracy": 0.8238636363636364,
+      "sensitivity": 0.20833333333333334,
+      "specificity": 0.9210526315789473,
+      "note": "performance on this source alone (external-style estimate)"
+    },
+    "shoulder": {
+      "n": 11,
+      "accuracy": 0.9090909090909091,
+      "sensitivity": 0.0,
+      "specificity": 1.0,
+      "note": "performance on this source alone (external-style estimate)"
+    }
+  },
+  "sensitivity_spread_across_sources": {
+    "min": 0.0,
+    "max": 0.6857142857142857,
+    "range": 0.6857142857142857
+  }
+}

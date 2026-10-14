@@ -1,0 +1,23 @@
+{
+  "labels_dir": "/home/user/work/fracatlas/Annotations/YOLO",
+  "class_mapping": {
+    "0": "fracture"
+  },
+  "n_annotation_files": 4084,
+  "n_empty_files": 3366,
+  "n_files_with_valid_boxes": 717,
+  "n_issue_rows": 1,
+  "boxes_by_class": {
+    "0:fracture": 922
+  },
+  "files_by_label": {
+    "no_fracture (empty/missing annotation)": 3366,
+    "fracture": 717
+  },
+  "spot_check_sample": {
+    "n": 50,
+    "sample_frac": 0.05,
+    "seed": 42,
+    "status": "PENDING HUMAN REVIEW - do not claim verification until annotation_review_sample.csv is completed and returned"
+  }
+}

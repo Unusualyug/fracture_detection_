@@ -1,0 +1,11 @@
+{
+  "source": "Manognya86/bone-fracture-detection- (Kaggle Bone Fracture Detection, F=fractured/H=healthy folders)",
+  "kept": {
+    "fracture": 94,
+    "no_fracture": 48
+  },
+  "removed_overlap_with_fracatlas": {
+    "md5": 0,
+    "phash_near": 0
+  }
+}

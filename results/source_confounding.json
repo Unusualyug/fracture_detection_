@@ -1,0 +1,35 @@
+{
+  "threshold": 0.5,
+  "per_source": {
+    "FracAtlas": {
+      "n": 615,
+      "accuracy": 0.7560975609756098,
+      "sensitivity": 0.48333333333333334,
+      "specificity": 0.8222222222222222
+    }
+  },
+  "leave_one_source_out": {
+    "FracAtlas": {
+      "n": 615,
+      "accuracy": 0.7560975609756098,
+      "sensitivity": 0.48333333333333334,
+      "specificity": 0.8222222222222222,
+      "note": "performance on this source alone (external-style estimate)"
+    }
+  },
+  "sensitivity_spread_across_sources": {
+    "min": 0.48333333333333334,
+    "max": 0.48333333333333334,
+    "range": 0.0
+  },
+  "source_predictability_from_embeddings": {
+    "n": 757,
+    "sources": {
+      "FracAtlas": 615,
+      "ExternalKaggleFractureGH": 142
+    },
+    "cv_accuracy_mean": 0.9326856047403277,
+    "majority_class_chance": 0.8124174372523117,
+    "interpretation": "CV accuracy >> chance => source identity is readable from the representation (shortcut/confounding risk)"
+  }
+}

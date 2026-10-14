@@ -273,6 +273,11 @@ def main() -> None:
     parser.add_argument("--external-dir", type=Path, default=None,
                         help="external dataset as ImageFolder (fracture/no_fracture); evaluated "
                              "once with the selected checkpoint, never used for selection")
+    parser.add_argument("--class-weighted", action="store_true",
+                        help="weight cross-entropy by inverse train class frequency")
+    parser.add_argument("--init-from", type=Path, default=None,
+                        help="initialise weights from a checkpoint saved by an earlier run "
+                             "(continued fine-tuning on the training partition only)")
     args = parser.parse_args()
 
     if args.threads:
@@ -302,7 +307,16 @@ def main() -> None:
 
     set_seed(args.seed)  # re-seed: ImageFolder/DataLoader construction must not shift the seed
     model = build_model(args.model, init=args.init).to(device)
-    criterion = nn.CrossEntropyLoss()
+    if args.init_from is not None:
+        model.load_state_dict(torch.load(args.init_from, map_location=device))
+        print(f"  initialised from checkpoint {args.init_from}")
+    if args.class_weighted:
+        counts = np.array([image_datasets["train"].targets.count(i) for i in range(len(CLASS_NAMES))], dtype=float)
+        weights = torch.tensor(counts.sum() / (len(counts) * counts), dtype=torch.float32).to(device)
+        print(f"  class-weighted loss: counts={counts.astype(int).tolist()} weights={weights.cpu().numpy().round(3).tolist()}")
+        criterion = nn.CrossEntropyLoss(weight=weights)
+    else:
+        criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
     history: list[dict] = []

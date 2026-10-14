@@ -70,3 +70,7 @@ test_output/
 # =========================
 gmail/
 paper/
+
+# Retraining artefacts (large binaries kept locally, metrics are committed)
+results/heatmaps/
+results/**/*.pth

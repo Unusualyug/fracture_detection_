@@ -1,0 +1,21 @@
+{
+  "overall": {
+    "n": 120,
+    "pointing_game_accuracy": 0.0,
+    "mean_energy_inside_box": 0.007746213002818391,
+    "mean_box_area_fraction_chance": 0.009887197066326531,
+    "mean_iou": 0.009050071329488806,
+    "mean_spearman_vs_randomised": -0.27087930244678327
+  },
+  "missing_heatmaps": 0,
+  "per_source": {
+    "FracAtlas": {
+      "n": 120,
+      "pointing_game_accuracy": 0.0,
+      "mean_energy_inside_box": 0.007746213002818391,
+      "mean_box_area_fraction_chance": 0.009887197066326531,
+      "mean_iou": 0.009050071329488806,
+      "mean_spearman_vs_randomised": -0.27087930244678327
+    }
+  }
+}

@@ -109,7 +109,7 @@ def main():
         counts = Counter(labels)
         chance = max(counts.values()) / len(labels)
         if len(counts) >= 2 and min(counts.values()) >= 5:
-            scores = cross_val_score(LogisticRegression(max_iter=1000, multi_class="auto"),
+            scores = cross_val_score(LogisticRegression(max_iter=1000),
                                      X, labels, cv=5)
             out["source_predictability_from_embeddings"] = {
                 "n": len(labels), "sources": dict(counts), "cv_accuracy_mean": float(scores.mean()),

@@ -1,0 +1,20 @@
+model=resnet50  seed=0  device=cpu
+epochs=5  batch_size=8  lr=0.0001
+  train  2,855 images  {'fracture': 476, 'no_fracture': 2379}
+  val      613 images  {'fracture': 121, 'no_fracture': 492}
+  test     615 images  {'fracture': 120, 'no_fracture': 495}
+  class-weighted loss: counts=[476, 2379] weights=[2.999000072479248, 0.6000000238418579]
+  epoch 1/5  train_loss=0.7153  val_loss=0.5356  val_acc=0.7977  val_f1=0.2706  val_auc=0.6562
+  epoch 2/5  train_loss=0.6798  val_loss=0.7020  val_acc=0.5938  val_f1=0.3759  val_auc=0.6486
+  epoch 3/5  train_loss=0.6617  val_loss=0.6840  val_acc=0.6411  val_f1=0.4211  val_auc=0.6891
+  epoch 4/5  train_loss=0.6403  val_loss=0.5279  val_acc=0.7847  val_f1=0.4720  val_auc=0.7028
+  epoch 5/5  train_loss=0.6120  val_loss=0.4872  val_acc=0.8173  val_f1=0.4043  val_auc=0.7303
+  saved selected checkpoint -> results/runs/resnet50_seed0.pth
+  wrote results/runs/resnet50_seed0_val_predictions.csv
+  wrote results/runs/resnet50_seed0_test_predictions.csv
+  wrote results/runs/resnet50_seed0_external_predictions.csv
+  EXTERNAL accuracy=0.2958 sensitivity=0.0319 auc=0.4176
+
+  selected epoch 4 (val F1 = 0.4720)
+  TEST  accuracy=0.7561  sensitivity=0.4833  f1=0.4361  auc=0.7368
+  wrote results/runs/resnet50_seed0.json  (51.8 min)

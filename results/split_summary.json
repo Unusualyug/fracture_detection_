@@ -1,0 +1,46 @@
+{
+  "seed": 42,
+  "images_dir": "/home/user/work/fracatlas/images",
+  "labels_dir": "/home/user/work/fracatlas/Annotations/YOLO",
+  "group_stats": {
+    "merged_by_md5": 15,
+    "merged_by_phash": 81,
+    "merged_by_phash_near": 188,
+    "phash_distance": 4,
+    "n_images": 4083,
+    "n_groups": 3799,
+    "n_unique_md5": 4068,
+    "n_unique_phash": 3929,
+    "n_unique_stem": 4083
+  },
+  "partitions": {
+    "train": {
+      "fracture": 476,
+      "no_fracture": 2379,
+      "total": 2855,
+      "groups": 2659,
+      "by_source": {
+        "FracAtlas": 2855
+      }
+    },
+    "val": {
+      "fracture": 121,
+      "no_fracture": 492,
+      "total": 613,
+      "groups": 570,
+      "by_source": {
+        "FracAtlas": 613
+      }
+    },
+    "test": {
+      "fracture": 120,
+      "no_fracture": 495,
+      "total": 615,
+      "groups": 570,
+      "by_source": {
+        "FracAtlas": 615
+      }
+    }
+  },
+  "group_overlap_check": "passed (no group spans two partitions)"
+}
