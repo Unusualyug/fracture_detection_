@@ -164,6 +164,36 @@ def predict(model: nn.Module, loader: DataLoader, device: torch.device):
     )
 
 
+def write_predictions(path: Path, dataset, y_true, p_fracture, manifest_map: dict) -> None:
+    """Per-image predictions CSV consumed by calibrate_threshold.py /
+    source_confounding.py. Class 0 is fracture (the positive class)."""
+    import csv as _csv
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as fh:
+        w = _csv.writer(fh)
+        w.writerow(["image", "y_true", "p_fracture", "source_dataset", "group_id"])
+        for (sample_path, _), truth, prob in zip(dataset.samples, y_true, p_fracture):
+            name = Path(sample_path).name
+            meta = manifest_map.get(name, {})
+            w.writerow([name, CLASS_NAMES[int(truth)], f"{float(prob):.6f}",
+                        meta.get("source_dataset", "unknown"), meta.get("group_id", "")])
+    print(f"  wrote {path}")
+
+
+def load_manifest_map(manifest: Path | None) -> dict:
+    """filename -> {source_dataset, group_id} from a split_manifest.csv."""
+    if manifest is None:
+        return {}
+    import csv as _csv
+    mapping = {}
+    with Path(manifest).open(newline="", encoding="utf-8") as fh:
+        for row in _csv.DictReader(fh):
+            mapping[Path(row["image"]).name] = {
+                "source_dataset": row.get("source_dataset", "unknown"),
+                "group_id": row.get("group_id", "")}
+    return mapping
+
+
 def binary_metrics(y_true: np.ndarray, y_pred: np.ndarray, p_fracture: np.ndarray) -> dict:
     """Accuracy, sensitivity, F1 (fracture class) and AUC.
 
@@ -238,6 +268,11 @@ def main() -> None:
                              "for offline pipeline testing only, never for reported results")
     parser.add_argument("--resume", action="store_true",
                         help="skip the run if its result JSON already exists")
+    parser.add_argument("--manifest", type=Path, default=Path("results/split_manifest.csv"),
+                        help="split_manifest.csv from make_split.py (source/group per image)")
+    parser.add_argument("--external-dir", type=Path, default=None,
+                        help="external dataset as ImageFolder (fracture/no_fracture); evaluated "
+                             "once with the selected checkpoint, never used for selection")
     args = parser.parse_args()
 
     if args.threads:
@@ -328,8 +363,38 @@ def main() -> None:
     if best_state is None:
         sys.exit("ERROR: no checkpoint was selected")
     model.load_state_dict(best_state)
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    checkpoint_path = args.out_dir / f"{args.model}_seed{args.seed}.pth"
+    torch.save(best_state, checkpoint_path)
+    print(f"  saved selected checkpoint -> {checkpoint_path}")
+    manifest_map = load_manifest_map(args.manifest if args.manifest and args.manifest.exists() else None)
+
+    y_val_best, _, prob_val_best = predict(model, loaders["val"], device)
+    write_predictions(args.out_dir / f"{args.model}_seed{args.seed}_val_predictions.csv",
+                      image_datasets["val"], y_val_best, prob_val_best, manifest_map)
+
     y_test, p_test, prob_test = predict(model, loaders["test"], device)
     test_metrics = binary_metrics(y_test, p_test, prob_test)
+    write_predictions(args.out_dir / f"{args.model}_seed{args.seed}_test_predictions.csv",
+                      image_datasets["test"], y_test, prob_test, manifest_map)
+
+    external_metrics = None
+    if args.external_dir is not None:
+        if not args.external_dir.is_dir():
+            sys.exit(f"ERROR: --external-dir not found: {args.external_dir}")
+        eval_tf = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor(),
+                                      transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD)])
+        external_ds = datasets.ImageFolder(str(args.external_dir), eval_tf)
+        if external_ds.classes != CLASS_NAMES:
+            raise SystemExit(f"ERROR: external class folders are {external_ds.classes}; expected {CLASS_NAMES}")
+        external_loader = DataLoader(external_ds, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
+        y_ext, p_ext, prob_ext = predict(model, external_loader, device)
+        external_metrics = binary_metrics(y_ext, p_ext, prob_ext)
+        write_predictions(args.out_dir / f"{args.model}_seed{args.seed}_external_predictions.csv",
+                          external_ds, y_ext, prob_ext,
+                          {Path(s).name: {"source_dataset": "external", "group_id": ""} for s, _ in external_ds.samples})
+        print(f"  EXTERNAL accuracy={external_metrics['accuracy']:.4f} "
+              f"sensitivity={external_metrics['sensitivity']:.4f} auc={external_metrics['auc']:.4f}")
 
     print(f"\n  selected epoch {best_epoch} (val F1 = {best_f1:.4f})")
     print(f"  TEST  accuracy={test_metrics['accuracy']:.4f}  "
@@ -351,6 +416,8 @@ def main() -> None:
         "positive_class": CLASS_NAMES[POSITIVE_INDEX],
         "history": history,
         "test": test_metrics,
+        "external": external_metrics,
+        "checkpoint": str(args.out_dir / f"{args.model}_seed{args.seed}.pth"),
         "test_predictions": {
             "y_true": y_test.tolist(),
             "y_pred": p_test.tolist(),

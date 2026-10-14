@@ -1,0 +1,2 @@
+dataset_name,url,licence,download_date,anatomical_regions,modality,n_images_total,n_fracture,n_no_fracture,annotation_format,class_id_mapping_file,patient_ids_available,notes
+FILL_ME,,,,,,,,,,,datasets/class_mapping.json,no,"One row per Kaggle/source dataset. Copy this row per source, fill every column, and delete this placeholder row. Do not train until every pooled image can be traced to one row here via data_inventory.csv."

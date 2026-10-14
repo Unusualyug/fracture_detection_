@@ -8,14 +8,26 @@ Grouping rule (Section IV-H)
 Two images belong to the same group if *any* of the following holds:
 
   1. they have the same MD5 hash (byte-identical files);
-  2. they have the same perceptual hash (pHash) of the greyscale image
-     (detects re-encoded / resized copies);
+  2. their perceptual hashes (pHash) are within ``--phash-distance`` bits
+     (Hamming distance, 64-bit hash; default 4 -- exact equality with 0)
+     (detects re-encoded / resized / lightly augmented copies);
   3. they share the same file-name stem *before* the Roboflow ``.rf.<hash>``
      suffix (detects augmented copies exported from one source image).
 
 Each connected set under these relations becomes one group.  Groups -- not
 images -- are then split 70/15/15 with scikit-learn's ``GroupShuffleSplit``
 using a fixed seed, so that no group can span two partitions.
+
+Source tracking
+---------------
+Pass ``--manifest data_inventory.csv`` with columns
+``image,source_dataset,label`` (paths relative to --images-dir; label as
+fracture/no_fracture or blank to fall back to the annotation-file rule) to
+record which Kaggle/source dataset every image came from.  Without a
+manifest, the source is inferred from the first path component under
+--images-dir (``unknown`` for a flat folder).  The source of every image is
+written to the split manifest and summarised per partition, so performance
+can later be reported per source (manuscript requirement 3).
 
 Usage
 -----
@@ -41,6 +53,7 @@ Run ``--help`` for all options.
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import re
@@ -174,7 +187,38 @@ def label_for(image_path: Path, images_dir: Path, labels_dir: Path) -> tuple[str
     return "no_fracture", ""
 
 
-def build_groups(images: list[Path]) -> tuple[list[int], dict[str, int]]:
+def load_inventory(manifest: Path | None, images_dir: Path) -> dict[str, dict[str, str]]:
+    """Read the optional data inventory: image -> {source_dataset, label}."""
+    if manifest is None:
+        return {}
+    if not manifest.is_file():
+        sys.exit(f"inventory manifest not found: {manifest}")
+    inventory: dict[str, dict[str, str]] = {}
+    with manifest.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        required = {"image", "source_dataset"}
+        if not required.issubset(reader.fieldnames or []):
+            sys.exit(f"{manifest} must have columns image,source_dataset[,label]; got {reader.fieldnames}")
+        for row in reader:
+            key = str(Path(row["image"]))
+            inventory[key] = {
+                "source_dataset": (row.get("source_dataset") or "unknown").strip() or "unknown",
+                "label": (row.get("label") or "").strip(),
+            }
+    print(f"      inventory: {len(inventory):,} rows from {manifest}")
+    return inventory
+
+
+def infer_source(image_path: Path, images_dir: Path, inventory: dict) -> str:
+    rel = image_path.relative_to(images_dir)
+    entry = inventory.get(str(rel)) or inventory.get(image_path.name)
+    if entry and entry["source_dataset"]:
+        return entry["source_dataset"]
+    parts = rel.parts
+    return parts[0] if len(parts) > 1 else "unknown"
+
+
+def build_groups(images: list[Path], phash_distance: int = 4) -> tuple[list[int], dict[str, int]]:
     """Union-find over the three grouping keys; return (group_id per image, stats)."""
     uf = UnionFind(len(images))
     first_seen: dict[tuple[str, str], int] = {}
@@ -198,6 +242,25 @@ def build_groups(images: list[Path]) -> tuple[list[int], dict[str, int]]:
                 uf.union(first_seen[slot], index)
             else:
                 first_seen[slot] = index
+
+    # Near-duplicate pHash union: hashes within `phash_distance` bits are
+    # treated as copies even when not bit-identical (re-encode/resize/crop).
+    if phash_distance > 0:
+        hash_by_index = {idx: int(value, 16)
+                         for (kind, value), idx in first_seen.items() if kind == "phash"}
+        indices = sorted(hash_by_index)
+        values = np.array([hash_by_index[i] for i in indices], dtype=np.uint64)
+        merged_near = 0
+        for a in range(len(indices)):
+            xor = values[a] ^ values[a + 1:]
+            close = np.nonzero(np.array([bin(int(x)).count("1") for x in xor]) <= phash_distance)[0] if len(xor) else []
+            for offset in close:
+                b = a + 1 + int(offset)
+                if uf.find(indices[a]) != uf.find(indices[b]):
+                    merged_near += 1
+                uf.union(indices[a], indices[b])
+        stats["merged_by_phash_near"] = merged_near
+        stats["phash_distance"] = phash_distance
 
     roots: dict[int, int] = {}
     group_ids: list[int] = []
@@ -253,7 +316,13 @@ def main() -> None:
         action="store_true",
         help="write the manifest and summary only, without building dataset folders",
     )
+    parser.add_argument("--manifest", type=Path, default=None,
+                        help="data inventory CSV (image,source_dataset[,label]) -- see datasets/dataset_registry.csv")
+    parser.add_argument("--phash-distance", type=int, default=4,
+                        help="max pHash Hamming distance (bits, 0-64) treated as a duplicate; 0 = exact only")
     args = parser.parse_args()
+    if not 0 <= args.phash_distance <= 64:
+        sys.exit("--phash-distance must be between 0 and 64")
 
     if not args.images_dir.is_dir():
         sys.exit(f"images directory not found: {args.images_dir}")
@@ -266,16 +335,23 @@ def main() -> None:
     print(f"      found {len(images):,} images")
 
     print("[2/5] labelling and hashing (MD5 + pHash) ...")
+    inventory = load_inventory(args.manifest, args.images_dir)
     labels: list[str] = []
     label_files: list[str] = []
+    sources: list[str] = []
     for i, path in enumerate(images, start=1):
         label, label_file = label_for(path, args.images_dir, args.labels_dir)
+        rel = str(path.relative_to(args.images_dir))
+        entry = inventory.get(rel) or inventory.get(path.name) or {}
+        if entry.get("label") in ("fracture", "no_fracture"):
+            label = entry["label"]  # verified inventory label wins over the blank-file rule
         labels.append(label)
         label_files.append(label_file)
+        sources.append(infer_source(path, args.images_dir, inventory))
         if i % 500 == 0 or i == len(images):
             print(f"      {i:,}/{len(images):,}", flush=True)
 
-    group_ids, stats = build_groups(images)
+    group_ids, stats = build_groups(images, phash_distance=args.phash_distance)
     print(f"      {stats['n_groups']:,} groups from {stats['n_images']:,} images "
           f"({stats['n_images'] / max(stats['n_groups'], 1):.2f} files/group)")
 
@@ -319,6 +395,7 @@ def main() -> None:
             "no_fracture": counts.get("no_fracture", 0),
             "total": len(idx),
             "groups": n_groups,
+            "by_source": dict(Counter(sources[i] for i in idx)),
         }
         print(f"      {name:<11} {counts.get('fracture', 0):>9,} {counts.get('no_fracture', 0):>12,} "
               f"{len(idx):>8,} {n_groups:>8,}")
@@ -330,6 +407,7 @@ def main() -> None:
                     "label_file": label_files[i],
                     "group_id": group_ids[i],
                     "split": name,
+                    "source_dataset": sources[i],
                 }
             )
     total = sum(len(v) for v in partitions.values())
@@ -341,11 +419,11 @@ def main() -> None:
     args.results_dir.mkdir(parents=True, exist_ok=True)
     manifest = args.results_dir / "split_manifest.csv"
     with manifest.open("w", encoding="utf-8") as handle:
-        handle.write("image,label,label_file,group_id,split\n")
+        handle.write("image,label,label_file,group_id,split,source_dataset\n")
         for row in rows:
             handle.write(
                 f"{row['image']},{row['label']},{row['label_file']},"
-                f"{row['group_id']},{row['split']}\n"
+                f"{row['group_id']},{row['split']},{row['source_dataset']}\n"
             )
     (args.results_dir / "split_summary.json").write_text(
         json.dumps(summary, indent=2), encoding="utf-8"

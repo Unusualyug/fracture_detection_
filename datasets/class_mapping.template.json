@@ -1,0 +1,4 @@
+{
+  "0": "fracture",
+  "_comment": "Copy to datasets/class_mapping.json and edit per source dataset. VERIFY each id against that dataset's own documentation (data.yaml / README) before use. If two sources use different ids, keep a separate mapping file per source and audit them separately. Any id not listed here is reported as an issue by scripts/verify_annotations.py instead of being silently treated as fracture."
+}
